@@ -1,0 +1,111 @@
+import sys
+
+
+def find(s, whole=False):
+
+    low = 0
+    high = len(dict_words) - 1
+
+    while low <= high:
+        mid = (low + high) // 2
+        guess = dict_words[mid] if whole else dict_words[mid][:len(s)]
+
+        if guess > s:
+            high = mid - 1
+        elif guess < s:
+            low = mid + 1
+        else:
+            return True
+
+    return False
+
+
+points = {1: 0,
+          2: 0,
+          3: 1,
+          4: 1,
+          5: 2,
+          6: 3,
+          7: 5, }
+
+
+card = tuple((i, j) for i in range(-1, 2)
+                  for j in range(-1, 2) if not i == j == 0)
+dict_words = []
+boards = []
+
+
+def rboards(filename):
+    global boards
+    with open(filename) as f:
+        lines = [l.strip() for l in f]
+        boards += [[l[i:i + 4] for i in range(0, 13, 4)] for l in lines]
+
+
+def rdictionary(filename):
+    global dict_words
+    with open(filename) as f:
+        dict_words = [l.strip().lower() for l in f]
+
+
+def next_words(board, pos=((0, 0),)):
+    cur = pos[-1]
+    next_pos = set(clamp(add_a_tuple(cur, offset)) for offset in card)
+    next_pos = set(p for p in next_pos if p not in pos)
+
+    next_words = {pos + (p,): build_word(board, pos + (p,))
+                  for p in next_pos}
+
+    return next_words
+
+
+def all_substrings(board, start):
+    w = next_words(board, start)
+    w = {k: v for (k, v) in w.items() if find(v)}
+
+    if w:
+        w2 = dict(w)
+        for pos_seq in w:
+            w2.update(all_substrings(board, pos_seq))
+        return w2
+    else:
+        return {}
+
+
+def all_words(board):
+    start_positions = tuple((i, j) for i in range(0, 4)
+                            for j in range(0, 4))
+
+    subs = {}
+    for pos in start_positions:
+        subs.update(all_substrings(board, (pos,)))
+
+    words = set(t for t in subs.values() if find(t, True))
+
+    return sorted(words)
+
+
+def add_a_tuple(t1, t2):
+    return (t1[0] + t2[0], t1[1] + t2[1])
+
+
+def clamp(s, _min=0, _max=3):
+    return tuple(max(_min, min(_max, n)) for n in s)
+
+
+def build_word(board, position):
+    return "".join(board[p[1]][p[0]] for p in position)
+
+
+def main():
+    rboards(sys.argv[1])
+    rdictionary(sys.argv[2])
+
+    for b in boards:
+        words = all_words(b)
+        tpoints = sum(points.get(len(s), 11) for s in words)
+        print("Possible points:", tpoints)
+
+
+if __name__ == '__main__':
+	main()
